@@ -1,7 +1,7 @@
 import logging 
 from abc import ABC, abstractmethod 
 
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegressionModel
 
 class Model(ABC):
     """

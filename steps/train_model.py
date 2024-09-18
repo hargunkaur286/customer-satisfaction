@@ -1,20 +1,22 @@
 import logging
-
-import pandas as pd 
-from zenml import step 
-
-from src.model_dev import LinearRegressionModel
+import pandas as pd
+from zenml import step
+from sklearn.linear_model import LinearRegression  # Import LinearRegression
 from sklearn.base import RegressorMixin
 from .config import ModelNameConfig
+from zenml.client import Client
+import mlflow
 
-@step
+experiment_tracker = Client().active_stack.experiment_tracker
+
+@step(experiment_tracker=experiment_tracker.name)
 def train_model(
     X_train: pd.DataFrame,
     X_test: pd.DataFrame,
     y_train: pd.DataFrame,
-    y_test: pd.DataFrame
+    y_test: pd.DataFrame,
     config: ModelNameConfig,
-) -> RegressionMixin:
+) -> RegressorMixin:
     """
     Trains the model on the ingested Data
 
@@ -23,15 +25,19 @@ def train_model(
         X_test: pd.DataFrame,
         y_train: pd.DataFrame,
         y_test: pd.DataFrame
+        config: ModelNameConfig (defines which model to use)
     """
     try:
         model = None
-        if config.model_name == "LinearRegression":
-            model = LinearRegression()
-            trained_model = model.train(X_train, y_train)
-            return trained_model
+        # Check the model_name from config and instantiate the appropriate model
+        if config.model_name == "LinearRegressionModel":
+            mlflow.sklearn.autolog()
+            model = LinearRegression() 
+            model.fit(X_train, y_train)  
+            logging.info("LinearRegression model trained successfully.")
+            return model
         else:
-            raise ValueError("Model {} not supported".format(config.model_name))
+            raise ValueError(f"Model {config.model_name} not supported")
     except Exception as e:
-        logging.error("Error in training model: {}".format(e))
-        raise e 
+        logging.error(f"Error in training model: {e}")
+        raise e

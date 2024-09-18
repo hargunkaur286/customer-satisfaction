@@ -8,10 +8,10 @@ from typing import Tuple
 
 @step 
 def clean_data(df: pd.DataFrame) -> Tuple[
-    Annotated[pd.DataFram, "X_train"],
-    Annotated[pd.DataFram, "X_test"],
-    Annotated[pd.DataFram, "y_train"],
-    Annotated[pd.DataFram, "y_test"],
+    Annotated[pd.DataFrame, "X_train"],
+    Annotated[pd.DataFrame, "X_test"],
+    Annotated[pd.DataFrame, "y_train"],
+    Annotated[pd.DataFrame, "y_test"],
 ]:
     """
     Cleans the data and divides it into training and testing
@@ -32,7 +32,15 @@ def clean_data(df: pd.DataFrame) -> Tuple[
         divide_strategy = DataDivideStrategy()
         data_cleaning = DataCleaning(processed_data, divide_strategy)
         X_train, X_test, y_train, y_test = data_cleaning.handle_data()
-        logging.info("Data cleaning completed")
+
+        if isinstance(y_train, pd.Series):
+            y_train = pd.DataFrame(y_train)
+        if isinstance(y_test, pd.Series):
+            y_test = pd.DataFrame(y_test)
+
+        logging.info("Data cleaning and division completed successfully")
+        return X_train, X_test, y_train, y_test
+
     except Exception as e:
         logging.error("Error in cleaning data: {}".format(e))
         raise e

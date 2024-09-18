@@ -1,6 +1,8 @@
 import logging 
 from abc import ABC, abstractmethod
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.base import RegressorMixin
+
 
 import numpy as np
 

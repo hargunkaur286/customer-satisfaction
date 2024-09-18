@@ -1,14 +1,18 @@
-import logging 
-
+import logging
 import pandas as pd
-from zenml import step 
+from zenml import step
 from typing import Tuple
-from typing_extensions import Annotated 
+from typing_extensions import Annotated
+from sklearn.base import RegressorMixin
+from zenml.client import Client
+from src.evaluation import MSE, R2, RMSE
+import mlflow 
 
-from src.evaluation import MSE, R2, RMSE 
+experiment_tracker = Client().active_stack.experiment_tracker
 
-@step 
-def evaluate_model (model: RegressorMixin,
+@step(experiment_tracker=experiment_tracker.name)
+def evaluate_model(
+    model: RegressorMixin,
     X_test: pd.DataFrame,
     y_test: pd.DataFrame,
 ) -> Tuple[
@@ -16,22 +20,39 @@ def evaluate_model (model: RegressorMixin,
     Annotated[float, "rmse"],
 ]:
     """
-    Evaluates the model on the ingested data.
+    Evaluates the model on the test data.
+
     Args:
-        df: the ingested data
+        model: Trained model to evaluate
+        X_test: Features for testing
+        y_test: True labels for testing
+
+    Returns:
+        r2_score: Coefficient of determination (R^2)
+        rmse: Root Mean Squared Error
     """
-    try: 
-        prediction = model.predict(X_test)
+    try:
+        # Get predictions
+        predictions = model.predict(X_test)
+
+        # Calculate metrics
         mse_class = MSE()
-        mse = mse_class.calculate_scores(y_test, prediction)
+        mse = mse_class.calculate_scores(y_test, predictions)
+        mlflow.log_metric("mse", mse)
 
         r2_class = R2()
-        r2 = r2_class.calculate_scores(y_test, prediction)
+        r2 = r2_class.calculate_scores(y_test, predictions)
+        mlflow.log_metric("r2", r2)
 
         rmse_class = RMSE()
-        rmse = rmse_class.calculate_scores(y_test, prediction)
+        rmse = rmse_class.calculate_scores(y_test, predictions)
+        mlflow.log_metric("rmse", rmse)
 
-        return r2_score, rmse
+        logging.info(f"Evaluation completed. R2 score: {r2}, RMSE: {rmse}")
+        
+        # Return R2 and RMSE as floats
+        return float(r2), float(rmse)
+
     except Exception as e:
-        logging.error("Error in evaluating model: {}".format(e))
-        raise e 
+        logging.error(f"Error in evaluating model: {e}")
+        raise e
